@@ -141,9 +141,13 @@ REPO="mcp-servers"                 # Artifact Registry Repository name
 IMAGE="gti-mcp-server"             # Container Image name
 ```
 
-### Step 2: Enable the Required GCP Services
-Enable the Google APIs required for container hosting and secure secret storage:
+### Step 2: Authenticate and Enable Required GCP Services
+Authenticate your local shell session with Google Cloud and enable the APIs required for container hosting and secure secret storage:
+
 ```bash
+# Authenticate your local shell session with Google Cloud
+gcloud auth login
+
 # Set your active gcloud project context
 gcloud config set project ${PROJECT_ID}
 
@@ -203,7 +207,7 @@ gcloud run deploy gti-mcp-server \
   --platform=managed \
   --no-allow-unauthenticated \
   --set-secrets="VT_APIKEY=VT_APIKEY:latest" \
-  --set-env-vars="TRANSPORT=sse,PORT=8080" \
+  --set-env-vars="TRANSPORT=sse" \
   --port=8080
 ```
 
@@ -243,7 +247,7 @@ Choose this path if you prefer to compile, tag, and push your container image us
      --platform=managed \
      --no-allow-unauthenticated \
      --set-secrets="VT_APIKEY=VT_APIKEY:latest" \
-     --set-env-vars="TRANSPORT=sse,PORT=8080" \
+     --set-env-vars="TRANSPORT=sse" \
      --port=8080
    ```
 

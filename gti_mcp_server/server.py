@@ -74,12 +74,10 @@ def main():
     transport = "stdio"
 
   if transport in ("sse", "http"):
-    host = os.getenv("HOST", "0.0.0.0")
-    port = int(port_env or "8080")
     # Set logging level to INFO so we see server start logs
     logging.getLogger().setLevel(logging.INFO)
-    logging.info(f"Starting FastMCP server with SSE transport on {host}:{port}")
-    server.run(transport="sse", host=host, port=port)
+    logging.info("Starting FastMCP server with SSE transport")
+    server.run(transport="sse")
   else:
     logging.info("Starting FastMCP server with stdio transport")
     server.run(transport="stdio")
