@@ -77,6 +77,17 @@ def main():
     # Set logging level to INFO so we see server start logs
     logging.getLogger().setLevel(logging.INFO)
     logging.info("Starting FastMCP server with SSE transport")
+    
+    # Map standard PORT and HOST variables to FastMCP's expected config vars
+    if port_env:
+      os.environ["FASTMCP_PORT"] = port_env
+    elif "PORT" in os.environ:
+      os.environ["FASTMCP_PORT"] = os.environ["PORT"]
+    else:
+      os.environ["FASTMCP_PORT"] = "8080"
+      
+    os.environ["FASTMCP_HOST"] = os.environ.get("HOST", "0.0.0.0")
+    
     server.run(transport="sse")
   else:
     logging.info("Starting FastMCP server with stdio transport")
