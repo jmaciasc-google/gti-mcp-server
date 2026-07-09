@@ -46,7 +46,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 USER mcpuser
 
 # Inform Docker that the container listens on the specified port
-EXPOSE 8080
+EXPOSE 8000
 
 # Run the MCP server. Calling python -m gti_mcp_server.server is highly robust
 # and bypasses any non-root path resolution issues.

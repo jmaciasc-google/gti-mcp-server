@@ -84,7 +84,7 @@ def main():
     elif "PORT" in os.environ:
       os.environ["FASTMCP_PORT"] = os.environ["PORT"]
     else:
-      os.environ["FASTMCP_PORT"] = "8080"
+      os.environ["FASTMCP_PORT"] = "8000"
       
     os.environ["FASTMCP_HOST"] = os.environ.get("HOST", "0.0.0.0")
     
