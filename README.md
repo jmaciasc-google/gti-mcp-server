@@ -324,3 +324,50 @@ Update your Claude Desktop settings (`~/Library/Application Support/Claude/claud
 
 > [!TIP]
 > Google OIDC tokens typically expire after 1 hour. In high-throughput orchestrators, use a local helper script to dynamically generate and refresh OIDC tokens via the GCP metadata server or gcloud context.
+
+---
+
+## Gemini Enterprise Integration (Optional)
+
+You can easily register this secure Cloud Run MCP server with **Gemini Enterprise (Gemini for Google Workspace)** using Google Cloud's centralized **Agent Registry (Preview)**. This allows your enterprise AI agents, chat assistants, and Workspace environments to discover and securely invoke your Google Threat Intelligence tools.
+
+Follow these command-driven steps to register your server:
+
+### Step 1: Enable the Agent Registry API
+Enable the required central services in your active Google Cloud project:
+```bash
+gcloud services enable agentregistry.googleapis.com
+```
+
+### Step 2: Install GCloud Alpha Components
+Ensure you have the `alpha` components installed locally:
+```bash
+gcloud components install alpha
+```
+
+### Step 3: Register the Service in the Agent Registry
+Register your Cloud Run MCP service. Make sure to replace `https://gti-mcp-server-xxxxxx-uc.a.run.app` with your actual **Cloud Run Service URL**:
+```bash
+gcloud alpha agent-registry services create gti-mcp-service \
+    --project=${PROJECT_ID} \
+    --location=${REGION} \
+    --display-name="Google Threat Intelligence" \
+    --description="Exposes Google Threat Intelligence (VirusTotal) capabilities for analyzing files, URLs, netlocs, and threat profiles." \
+    --interfaces="url=https://gti-mcp-server-xxxxxx-uc.a.run.app/sse,protocolBinding=JSONRPC"
+```
+
+### Step 4: Verify Your Registered Server
+List and describe your registered server from the CLI to verify it was created successfully:
+```bash
+# List all registered MCP servers
+gcloud alpha agent-registry mcp-servers list \
+    --project=${PROJECT_ID} \
+    --location=${REGION}
+
+# Describe your new GTI service
+gcloud alpha agent-registry mcp-servers describe gti-mcp-service \
+    --project=${PROJECT_ID} \
+    --location=${REGION}
+```
+
+Once registered, your Google Threat Intelligence tools are securely logged in Google's enterprise registry plane and ready for integration with your Workspace and generative AI apps!

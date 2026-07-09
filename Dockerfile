@@ -48,6 +48,6 @@ USER mcpuser
 # Inform Docker that the container listens on the specified port
 EXPOSE 8080
 
-# Run the MCP server. The main entry point was defined as `gti-mcp-server` in pyproject.toml.
-# You can customize TRANSPORT, PORT, etc. at runtime.
-ENTRYPOINT ["gti-mcp-server"]
+# Run the MCP server. Calling python -m gti_mcp_server.server is highly robust
+# and bypasses any non-root path resolution issues.
+ENTRYPOINT ["python", "-m", "gti_mcp_server.server"]
