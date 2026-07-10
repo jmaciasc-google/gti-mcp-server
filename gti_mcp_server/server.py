@@ -54,6 +54,7 @@ async def vt_client(ctx: Context) -> AsyncIterator[vt.Client]:
 server = FastMCP(
     "Google Threat Intelligence MCP server",
     dependencies=["vt-py"],
+    host="0.0.0.0",
     stateless_http=stateless)
 
 # Load tools.
