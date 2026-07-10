@@ -88,6 +88,10 @@ def main():
       
     os.environ["FASTMCP_HOST"] = os.environ.get("HOST", "0.0.0.0")
     
+    # Overwrite FastMCP's cached settings to bypass the import-time timing quirk
+    server.settings.host = os.environ["FASTMCP_HOST"]
+    server.settings.port = int(os.environ["FASTMCP_PORT"])
+    
     server.run(transport="sse")
   else:
     logging.info("Starting FastMCP server with stdio transport")
