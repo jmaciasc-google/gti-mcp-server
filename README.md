@@ -252,7 +252,19 @@ Choose this path if you prefer to compile, tag, and push your container image us
    ```
 
 > [!SUCCESS]
-> Your secure GTI MCP server is now running! It will print a **Service URL** (e.g., `https://gti-mcp-server-xxxxxx-uc.a.run.app`). Write this URL down as you will need it to connect your agents.
+> Your secure GTI MCP server is now running! To automate subsequent verification and integration steps, **programmatically extract and store your newly deployed Service URL and Hostname** directly in your shell environment:
+> 
+> ```bash
+> # 1. Dynamically retrieve and store your Cloud Run service URL
+> export SERVICE_URL=$(gcloud run services describe gti-mcp-server --region=${REGION} --format="value(status.url)")
+> 
+> # 2. Extract and store just the hostname
+> export SERVICE_HOST=$(echo $SERVICE_URL | sed -e 's|^[^/]*//||' -e 's|/.*$||')
+> 
+> # 3. Confirm they are captured correctly (Optional)
+> echo "SERVICE_URL: ${SERVICE_URL}"
+> echo "SERVICE_HOST: ${SERVICE_HOST}"
+> ```
 
 ---
 
@@ -267,20 +279,19 @@ Make sure you are logged in to your GCP account locally via `gcloud`, then run t
 # Make sure the script is executable
 chmod +x verify.sh
 
-# Run against your remote Cloud Run URL
-HOST="gti-mcp-server-xxxxxx-uc.a.run.app" PORT="443" ./verify.sh
+# Run against your remote Cloud Run URL (using the dynamically captured hostname)
+HOST=$SERVICE_HOST PORT="443" ./verify.sh
 ```
 
 ### Option B: Manual Verification with Curl
 1. **Generate a Google ID Token matching your Cloud Run service URL:**
    ```bash
-   TARGET_URL="https://gti-mcp-server-xxxxxx-uc.a.run.app"
-   ID_TOKEN=$(gcloud auth print-identity-token --audiences="${TARGET_URL}")
+   ID_TOKEN=$(gcloud auth print-identity-token --audiences="${SERVICE_URL}")
    ```
 
 2. **Establish the SSE Connection (include the token):**
    ```bash
-   curl -i -H "Authorization: Bearer ${ID_TOKEN}" "${TARGET_URL}/sse"
+   curl -i -H "Authorization: Bearer ${ID_TOKEN}" "${SERVICE_URL}/sse"
    ```
    *Expected Response:*
    ```http
@@ -297,7 +308,7 @@ HOST="gti-mcp-server-xxxxxx-uc.a.run.app" PORT="443" ./verify.sh
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer ${ID_TOKEN}" \
      -d '{"jsonrpc": "2.0", "method": "tools/list", "params": {}, "id": 1}' \
-     "${TARGET_URL}/messages/?session_id=da831f24d35e40a0bb5c3da42903e670"
+     "${SERVICE_URL}/messages/?session_id=da831f24d35e40a0bb5c3da42903e670"
    ```
 
 ---
@@ -313,7 +324,7 @@ Update your Claude Desktop settings (`~/Library/Application Support/Claude/claud
 {
   "mcpServers": {
     "gti-secure-cloud": {
-      "url": "https://gti-mcp-server-xxxxxx-uc.a.run.app/sse",
+      "url": "SERVICE_URL_GOES_HERE/sse",
       "headers": {
         "Authorization": "Bearer YOUR_GOOGLE_OIDC_ID_TOKEN_HERE"
       }
@@ -346,14 +357,14 @@ gcloud components install alpha
 ```
 
 ### Step 3: Register the Service in the Agent Registry
-Register your Cloud Run MCP service. Make sure to replace `https://gti-mcp-server-xxxxxx-uc.a.run.app` with your actual **Cloud Run Service URL**:
+Register your Cloud Run MCP service. This leverages your dynamically captured `${SERVICE_URL}` variable with zero copy-pasting needed:
 ```bash
 gcloud alpha agent-registry services create gti-mcp-service \
     --project=${PROJECT_ID} \
     --location=${REGION} \
     --display-name="Google Threat Intelligence" \
     --description="Exposes Google Threat Intelligence (VirusTotal) capabilities for analyzing files, URLs, netlocs, and threat profiles." \
-    --interfaces="url=https://gti-mcp-server-xxxxxx-uc.a.run.app/sse,protocolBinding=JSONRPC"
+    --interfaces="url=${SERVICE_URL}/sse,protocolBinding=JSONRPC"
 ```
 
 ### Step 4: Verify Your Registered Server
