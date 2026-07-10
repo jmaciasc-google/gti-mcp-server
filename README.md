@@ -270,34 +270,9 @@ Choose this path if you prefer to compile, tag, and push your container image us
 
 ---
 
-## MCP Client Configurations
+## Gemini Enterprise Integration
 
-To connect this secure cloud-deployed server to your local desktop agents or cloud workflows, you must provide your Google OIDC Bearer Token.
-
-### Claude Desktop (Connecting to Secure Cloud Run)
-Update your Claude Desktop settings (`~/Library/Application Support/Claude/claude_desktop_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "gti-secure-cloud": {
-      "url": "SERVICE_URL_GOES_HERE/sse",
-      "headers": {
-        "Authorization": "Bearer YOUR_GOOGLE_OIDC_ID_TOKEN_HERE"
-      }
-    }
-  }
-}
-```
-
-> [!TIP]
-> Google OIDC tokens typically expire after 1 hour. In high-throughput orchestrators, use a local helper script to dynamically generate and refresh OIDC tokens via the GCP metadata server or gcloud context.
-
----
-
-## Gemini Enterprise Integration (Optional)
-
-You can easily register this secure Cloud Run MCP server with **Gemini Enterprise (Gemini for Google Workspace)** using Google Cloud's centralized **Agent Registry (Preview)**. This allows your enterprise AI agents, chat assistants, and Workspace environments to discover and securely invoke your Google Threat Intelligence tools.
+You can easily register this secure Cloud Run MCP server with **Gemini Enterprise** using Google Cloud's centralized **Agent Registry (Preview)**. This allows your enterprise AI agents, chat assistants, and Workspace environments to discover and securely invoke your Google Threat Intelligence tools.
 
 Follow these command-driven steps to register your server:
 
