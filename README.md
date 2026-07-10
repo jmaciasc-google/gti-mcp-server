@@ -29,13 +29,14 @@ While the official project is designed as a broad, developer-focused, multi-tool
 ---
 
 ## Table of Contents
-1. [Core Features](#core-features)
-2. [Configuration & Customization (Optional)](#configuration--customization-optional)
-3. [Local Development & Setup](#local-development--setup)
-4. [Containerization & Docker](#containerization--docker)
-5. [Production Google Cloud Run Deployment (Strict Secret Manager)](#production-google-cloud-run-deployment-strict-secret-manager)
-6. [Verification Without an Agent](#verification-without-an-agent)
+1. [Project Origin & Deployment Philosophy](#project-origin--deployment-philosophy)
+2. [Core Features](#core-features)
+3. [Configuration & Customization (Optional)](#configuration--customization-optional)
+4. [Local Development & Setup](#local-development--setup)
+5. [Containerization & Docker](#containerization--docker)
+6. [Production Google Cloud Run Deployment (Strict Secret Manager)](#production-google-cloud-run-deployment-strict-secret-manager)
 7. [MCP Client Configurations](#mcp-client-configurations)
+8. [Gemini Enterprise Integration (Optional)](#gemini-enterprise-integration-optional)
 
 ---
 
@@ -208,7 +209,11 @@ gcloud run deploy gti-mcp-server \
   --no-allow-unauthenticated \
   --set-secrets="VT_APIKEY=VT_APIKEY:latest" \
   --set-env-vars="TRANSPORT=sse" \
-  --port=8000
+  --port=8000 \
+  --max-instances=5 \
+  --cpu=1 \
+  --memory=512Mi \
+  --no-cpu-throttling
 ```
 
 ---
@@ -241,14 +246,18 @@ Choose this path if you prefer to compile, tag, and push your container image us
 
 5. **Deploy the pushed image to Cloud Run:**
    ```bash
-   gcloud run deploy gti-mcp-server \
-     --image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE}:latest \
-     --region=${REGION} \
-     --platform=managed \
-     --no-allow-unauthenticated \
-     --set-secrets="VT_APIKEY=VT_APIKEY:latest" \
-     --set-env-vars="TRANSPORT=sse" \
-     --port=8000
+    gcloud run deploy gti-mcp-server \
+      --image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE}:latest \
+      --region=${REGION} \
+      --platform=managed \
+      --no-allow-unauthenticated \
+      --set-secrets="VT_APIKEY=VT_APIKEY:latest" \
+      --set-env-vars="TRANSPORT=sse" \
+      --port=8000 \
+      --max-instances=5 \
+      --cpu=1 \
+      --memory=512Mi \
+      --no-cpu-throttling
    ```
 
 > [!SUCCESS]
@@ -298,13 +307,7 @@ Enable the required central services in your active Google Cloud project:
 gcloud services enable agentregistry.googleapis.com
 ```
 
-### Step 2: Install GCloud Alpha Components
-Ensure you have the `alpha` components installed locally:
-```bash
-gcloud components install alpha
-```
-
-### Step 3: Register the Service in the Agent Registry
+### Step 2: Register the Service in the Agent Registry
 Register your Cloud Run MCP service. This leverages your dynamically captured `${SERVICE_URL}` variable with zero copy-pasting needed:
 ```bash
 gcloud alpha agent-registry services create gti-mcp-service \
@@ -312,19 +315,20 @@ gcloud alpha agent-registry services create gti-mcp-service \
     --location=${REGION} \
     --display-name="Google Threat Intelligence" \
     --description="Exposes Google Threat Intelligence (VirusTotal) capabilities for analyzing files, URLs, netlocs, and threat profiles." \
-    --interfaces="url=${SERVICE_URL}/sse,protocolBinding=JSONRPC"
+    --interfaces="url=${SERVICE_URL}/sse,protocolBinding=JSONRPC" \
+    --endpoint-spec-type=no-spec
 ```
 
-### Step 4: Verify Your Registered Server
+### Step 3: Verify Your Registered Server
 List and describe your registered server from the CLI to verify it was created successfully:
 ```bash
-# List all registered MCP servers
-gcloud alpha agent-registry mcp-servers list \
+# List all registered services
+gcloud alpha agent-registry services list \
     --project=${PROJECT_ID} \
     --location=${REGION}
 
 # Describe your new GTI service
-gcloud alpha agent-registry mcp-servers describe gti-mcp-service \
+gcloud alpha agent-registry services describe gti-mcp-service \
     --project=${PROJECT_ID} \
     --location=${REGION}
 ```
