@@ -252,64 +252,12 @@ Choose this path if you prefer to compile, tag, and push your container image us
    ```
 
 > [!SUCCESS]
-> Your secure GTI MCP server is now running! To automate subsequent verification and integration steps, **programmatically extract and store your newly deployed Service URL and Hostname** directly in your shell environment:
+> Your secure GTI MCP server is now running! It will print a **Service URL** (e.g., `https://gti-mcp-server-xxxxxx-uc.a.run.app`). To automate subsequent registration and integration steps, **programmatically extract and store your newly deployed Service URL** directly in your shell environment:
 > 
 > ```bash
-> # 1. Dynamically retrieve and store your Cloud Run service URL
+> # Dynamically retrieve and store your Cloud Run service URL
 > export SERVICE_URL=$(gcloud run services describe gti-mcp-server --region=${REGION} --format="value(status.url)")
-> 
-> # 2. Extract and store just the hostname
-> export SERVICE_HOST=$(echo $SERVICE_URL | sed -e 's|^[^/]*//||' -e 's|/.*$||')
-> 
-> # 3. Confirm they are captured correctly (Optional)
-> echo "SERVICE_URL: ${SERVICE_URL}"
-> echo "SERVICE_HOST: ${SERVICE_HOST}"
 > ```
-
----
-
-## Verification Without an Agent
-
-Because the cloud server has unauthenticated access disabled (`--no-allow-unauthenticated`), standard public requests will be blocked. To verify that it's working, your request must include an **Authorization OIDC Bearer Token**.
-
-### Option A: Automatic Local Verification Script
-Make sure you are logged in to your GCP account locally via `gcloud`, then run the local verification script which automatically handles the OIDC token generation and queries the remote server:
-
-```bash
-# Make sure the script is executable
-chmod +x verify.sh
-
-# Run against your remote Cloud Run URL (using the dynamically captured hostname)
-HOST=$SERVICE_HOST PORT="443" ./verify.sh
-```
-
-### Option B: Manual Verification with Curl
-1. **Generate a Google ID Token matching your Cloud Run service URL:**
-   ```bash
-   ID_TOKEN=$(gcloud auth print-identity-token --audiences="${SERVICE_URL}")
-   ```
-
-2. **Establish the SSE Connection (include the token):**
-   ```bash
-   curl -i -H "Authorization: Bearer ${ID_TOKEN}" "${SERVICE_URL}/sse"
-   ```
-   *Expected Response:*
-   ```http
-   HTTP/1.1 200 OK
-   Content-Type: text/event-stream
-   ...
-   event: endpoint
-   data: /messages/?session_id=da831f24d35e40a0bb5c3da42903e670
-   ```
-
-3. **Send a JSON-RPC Post request (include the token):**
-   ```bash
-   curl -s -X POST \
-     -H "Content-Type: application/json" \
-     -H "Authorization: Bearer ${ID_TOKEN}" \
-     -d '{"jsonrpc": "2.0", "method": "tools/list", "params": {}, "id": 1}' \
-     "${SERVICE_URL}/messages/?session_id=da831f24d35e40a0bb5c3da42903e670"
-   ```
 
 ---
 
