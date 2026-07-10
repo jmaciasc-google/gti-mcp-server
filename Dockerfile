@@ -27,7 +27,7 @@ FROM python:3.11-slim AS runner
 # Set production environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PORT=8080 \
+    PORT=8000 \
     TRANSPORT=sse
 
 WORKDIR /app

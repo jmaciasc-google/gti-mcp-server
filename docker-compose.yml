@@ -6,7 +6,7 @@ services:
     image: gti-mcp-server:latest
     container_name: gti-mcp-server
     ports:
-      - "8080:8080"
+      - "8000:8000"
     environment:
       # CRITICAL SECURITY WARNING: Do NOT hardcode your plaintext API key here!
       # (Note: This docker-compose file is ONLY used for local desktop testing).
@@ -14,6 +14,6 @@ services:
       # For Cloud Run (Production): This is handled 100% automatically by Google Secret Manager.
       - VT_APIKEY=${VT_APIKEY}
       - TRANSPORT=sse
-      - PORT=8080
+      - PORT=8000
       - HOST=0.0.0.0
     restart: unless-stopped

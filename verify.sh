@@ -19,14 +19,14 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 HOST=${HOST:-"localhost"}
-PORT=${PORT:-"8080"}
+PORT=${PORT:-"8000"}
 
 # Format the base URL correctly (use https for secure remotes, http for localhost)
 if [[ "$HOST" == "localhost" || "$HOST" == "127.0.0.1" ]]; then
     BASE_URL="http://${HOST}:${PORT}"
 else
     # Remote deployments are typically served over HTTPS on standard port 443
-    if [ "$PORT" = "8080" ]; then
+    if [ "$PORT" = "8000" ]; then
         BASE_URL="https://${HOST}"
     else
         BASE_URL="https://${HOST}:${PORT}"
@@ -75,7 +75,7 @@ elif [ "$HTTP_STATUS" = "000" ] || [ "$HTTP_STATUS" -ge 400 ]; then
     echo -e "${RED}Error: Cannot connect to the server at ${BASE_URL} (Status Code: $HTTP_STATUS).${NC}"
     echo -e "${YELLOW}Please ensure your server is running. You can start it via:${NC}"
     echo -e "  - Docker Compose:  ${GREEN}docker compose up -d${NC} (from the repository root)"
-    echo -e "  - Local Python:    ${GREEN}uv run gti-mcp-server --transport sse --port 8080${NC}"
+    echo -e "  - Local Python:    ${GREEN}uv run gti-mcp-server --transport sse --port 8000${NC}"
     echo -e ""
     exit 1
 fi

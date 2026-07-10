@@ -106,7 +106,7 @@ This project is pre-configured and completely ready to run out-of-the-box. **You
    gti-mcp-server
 
    # Run in SSE/HTTP network mode (for cloud simulation or container testing):
-   TRANSPORT=sse PORT=8080 gti-mcp-server
+   TRANSPORT=sse PORT=8000 gti-mcp-server
    ```
 
 ---
@@ -121,7 +121,7 @@ docker build -t gti-mcp-server:latest .
 ```
 
 ### 2. Run with Docker Compose
-Using Docker Compose binds the container to port `8080` and loads configuration from your `.env` file:
+Using Docker Compose binds the container to port `8000` and loads configuration from your `.env` file:
 ```bash
 docker compose up -d
 ```
@@ -208,7 +208,7 @@ gcloud run deploy gti-mcp-server \
   --no-allow-unauthenticated \
   --set-secrets="VT_APIKEY=VT_APIKEY:latest" \
   --set-env-vars="TRANSPORT=sse" \
-  --port=8080
+  --port=8000
 ```
 
 ---
@@ -248,7 +248,7 @@ Choose this path if you prefer to compile, tag, and push your container image us
      --no-allow-unauthenticated \
      --set-secrets="VT_APIKEY=VT_APIKEY:latest" \
      --set-env-vars="TRANSPORT=sse" \
-     --port=8080
+     --port=8000
    ```
 
 > [!SUCCESS]
