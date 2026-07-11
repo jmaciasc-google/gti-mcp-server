@@ -1,6 +1,6 @@
 # Google Threat Intelligence MCP Server
 
-A production-ready, highly optimized Model Context Protocol (MCP) server for Google Threat Intelligence (GTI) (incorporating VirusTotal and Mandiant threat analytics). This server supports both local desktop integration via `stdio` and cloud-native network deployments via Server-Sent Events (SSE), making it fully compatible with Google Cloud Run or any other container-native environment.
+A production-ready, highly optimized Model Context Protocol (MCP) server for Google Threat Intelligence (GTI) (incorporating VirusTotal and Mandiant threat analytics). This server supports cloud-native network deployments via Stateless HTTP (streamable-http) or Server-Sent Events (SSE), making it fully compatible with Google Cloud Run or any other container-native environment.
 
 ---
 
@@ -37,8 +37,8 @@ While the official project is designed as a broad, developer-focused, multi-tool
    - [Verifying Your Local SSE Server (No Agent Required)](#-verifying-your-local-sse-server-no-agent-required)
 6. [Containerization & Docker](#containerization--docker)
 7. [Production Google Cloud Run Deployment (Strict Secret Manager)](#production-google-cloud-run-deployment-strict-secret-manager)
-8. [MCP Client Configurations](#mcp-client-configurations)
-9. [Gemini Enterprise Integration (Optional)](#gemini-enterprise-integration-optional)
+   - [Verifying Your Cloud Run Stateless HTTP Server (No Agent Required)](#-verifying-your-cloud-run-stateless-http-server-no-agent-required)
+8. [Gemini Enterprise Integration (Optional)](#gemini-enterprise-integration-optional)
 
 ---
 
@@ -118,13 +118,12 @@ Once inside the directory, choose the section that matches your goal:
    ```
 
 3. **Run the server locally:**
-   ```bash
-   # Run in stdio mode (default, for local Desktop agents):
-   gti-mcp-server
 
-   # Run in SSE/HTTP network mode (for cloud simulation or container testing):
-   TRANSPORT=sse PORT=8000 gti-mcp-server
+   Start the server in SSE/HTTP network mode. This boots the server as an HTTP service listening on port 8000 by default and outputs active startup logs once initialized:
+   ```bash
+   gti-mcp-server
    ```
+
 
 ### 🧪 Verifying Your Local SSE Server (No Agent Required)
 
@@ -307,7 +306,7 @@ gcloud run deploy gti-mcp-server \
   --platform=managed \
   --no-allow-unauthenticated \
   --set-secrets="VT_APIKEY=VT_APIKEY:latest" \
-  --set-env-vars="TRANSPORT=sse" \
+  --set-env-vars="TRANSPORT=http,STATELESS=1" \
   --port=8000 \
   --max-instances=5 \
   --cpu=1 \
@@ -351,7 +350,7 @@ Choose this path if you prefer to compile, tag, and push your container image us
       --platform=managed \
       --no-allow-unauthenticated \
       --set-secrets="VT_APIKEY=VT_APIKEY:latest" \
-      --set-env-vars="TRANSPORT=sse" \
+      --set-env-vars="TRANSPORT=http,STATELESS=1" \
       --port=8000 \
       --max-instances=5 \
       --cpu=1 \
@@ -359,13 +358,48 @@ Choose this path if you prefer to compile, tag, and push your container image us
       --no-cpu-throttling
    ```
 
-> [!SUCCESS]
-> Your secure GTI MCP server is now running! It will print a **Service URL** (e.g., `https://gti-mcp-server-xxxxxx-uc.a.run.app`). To automate subsequent registration and integration steps, **programmatically extract and store your newly deployed Service URL** directly in your shell environment:
-> 
-> ```bash
-> # Dynamically retrieve and store your Cloud Run service URL
-> export SERVICE_URL=$(gcloud run services describe gti-mcp-server --region=${REGION} --format="value(status.url)")
-> ```
+### Step 6: Retrieve and Save Your Cloud Run Service URL
+Once successfully deployed, retrieve your Cloud Run live service URL and export it as an environment variable in your terminal session. This variable is required to register your server with Gemini Enterprise later:
+
+```bash
+SERVICE_URL=$(gcloud run services describe gti-mcp-server --region=${REGION} --format="value(status.url)")
+echo "Your live Service URL is: ${SERVICE_URL}"
+```
+
+> [NOTE]
+> Setting `host="0.0.0.0"` in our server configuration ensures that the container is fully compatible with Cloud Run and can accept incoming production connections smoothly.
+
+### 🧪 Verifying Your Cloud Run Stateless HTTP Server (No Agent Required)
+
+Once your service is deployed, you can verify that the live production server is functioning, authenticated, and communicating properly over the network without needing to set up an AI agent first.
+
+Using the official Google Cloud secure proxy is the **simplest, safest, and most recommended method** because it handles OAuth authentication and Host headers automatically.
+
+This test requires **two separate terminal windows (or tabs)**:
+
+#### Step 1: Start the Cloud Run Proxy (Terminal Window 1)
+Run this command to boot up a secure local authentication tunnel mapped to port `8000`:
+```bash
+gcloud run services proxy gti-mcp-server --region=${REGION} --port 8000
+```
+*Leave this terminal running. It will output a confirmation log indicating that port 8000 is proxying to your secure Cloud Run service.*
+
+#### Step 2: Query the Tools List (Terminal Window 2)
+In your second terminal window, send a single JSON-RPC POST request to the proxied server at `/mcp` to list all available tools:
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list",
+    "params": {}
+  }' \
+  "http://localhost:8000/mcp"
+```
+
+**What you will see:**
+It will connect instantly and output a beautiful JSON-RPC response containing your entire suite of Google Threat Intelligence tools (`get_file_report`, `search_iocs`, etc.) served directly from your secure Cloud Run deployment!
 
 ---
 
@@ -373,33 +407,52 @@ Choose this path if you prefer to compile, tag, and push your container image us
 
 You can easily connect and register this secure Cloud Run MCP server directly with your **Gemini Enterprise App** (such as `default-chat` within Vertex AI Agent Builder) using a 100% command-line driven **Discovery Engine custom MCP data store** workflow.
 
-Follow these command-driven steps to enable the required APIs, create your data store, authorize security, enable threat intelligence actions, and link them to Gemini:
+Follow these command-driven steps to enable the required APIs, configure your OAuth identity provider, create your data store, authorize security, enable threat intelligence actions, and link them to Gemini:
 
-### Step 1: Define Your Discovery Engine Variables
-Configure your session variables. These are used to dynamically populate subsequent integration commands:
-```bash
-LOCATION="us"                           # Discovery Engine location (e.g., us, global)
-COLLECTION_ID="gti-mcp-server-collection"  # Your unique collection identifier
-DATA_STORE_ID="gti-mcp-server-collection"  # Data store ID (typically matches collection ID)
-DISPLAY_NAME="Google Threat Intelligence Tools"
-
-# OAuth / OIDC Identity Provider Configuration (Required by Discovery Engine for custom MCP)
-AUTH_URL="https://example.com/oauth/auth"       # Replace with your OAuth authorization URI
-TOKEN_URL="https://example.com/oauth/token"     # Replace with your OAuth token URI
-CLIENT_ID="your-client-id"                      # Replace with your OAuth Client ID
-CLIENT_SECRET="your-client-secret"              # Replace with your OAuth Client Secret
-```
-
-### Step 2: Enable Required APIs
-Enable the advanced core APIs required for Discovery Engine custom datastores:
+### Step 1: Enable Required APIs
+Enable the advanced core APIs required for Discovery Engine custom datastores first, as initialization may take a minute:
 ```bash
 gcloud services enable discoveryengine.googleapis.com \
   --project=${PROJECT_ID}
 ```
 
-### Step 3: Create the Custom MCP Data Store (via setUpDataConnector REST API)
-Because the `discoveryengine` command group is not standard in the public `gcloud` SDK, use **`curl`** to invoke the Discovery Engine custom MCP setup API directly. This endpoint establishes a federated custom MCP connector:
+### Step 2: Define Your OAuth Endpoints
+Configure your session variables for your OAuth identity provider (required by Discovery Engine to federate and authenticate custom MCP servers):
+```bash
+# Default Google Cloud Identity OAuth 2.0 endpoints (change these if you are using a custom/external Identity Provider)
+AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth"
+TOKEN_URL="https://oauth2.googleapis.com/token"
+```
 
+### Step 3: Create an OAuth Client ID
+Because OAuth Clients cannot be created programmatically via `gcloud` APIs, you must create one manually in the Google Cloud Console:
+1. Navigate to the [Google Cloud Console API Credentials page](https://console.cloud.google.com/apis/credentials).
+2. Click **Create Credentials** > **OAuth client ID**.
+3. Select **Web application** as the application type.
+4. Name your client (e.g., `GTI MCP Server Client`).
+5. Under **Authorized redirect URIs**, add any redirect URIs if required by your identity environment.
+6. Click **Create** and copy your **Client ID** and **Client Secret**.
+
+Once you have your credentials, define them in your active terminal session:
+```bash
+CLIENT_ID="your-client-id"                      # Replace with your copied OAuth Client ID
+CLIENT_SECRET="your-client-secret"              # Replace with your copied OAuth Client Secret
+```
+
+> [!TIP]
+> For more details on Google's OAuth 2.0 implementation and general concepts, refer to the [Official Google Identity OAuth 2.0 Documentation](https://developers.google.com/identity/protocols/oauth2).
+
+### Step 4: Create the Custom MCP Data Store (via setUpDataConnector REST API)
+Because the `discoveryengine` command group is not standard in the public `gcloud` SDK, use **`curl`** to invoke the Discovery Engine custom MCP setup API directly.
+
+First, define your Discovery Engine settings:
+```bash
+LOCATION="us"                           # Discovery Engine location (e.g., us, global)
+COLLECTION_ID="gti-mcp-server-collection"  # Your unique collection identifier
+DISPLAY_NAME="Google Threat Intelligence Tools"
+```
+
+Now, execute the API call to establish a federated custom MCP connector:
 ```bash
 curl -X POST \
   -H "Authorization: Bearer $(gcloud auth print-access-token)" \
@@ -424,15 +477,15 @@ curl -X POST \
       "staticIpEnabled": false,
       "actionConfig": {
         "actionParams": {
-          "instance_uri": "'"${SERVICE_URL}"'",
+          "instance_uri": "'"${SERVICE_URL}"'/mcp",
           "auth_uri": "'"${AUTH_URL}"'",
           "token_uri": "'"${TOKEN_URL}"'",
           "client_id": "'"${CLIENT_ID}"'",
           "client_secret": "'"${CLIENT_SECRET}"'",
           "scopes": "openid",
           "auth_type": "OAUTH",
-          "mcp_server_description": "gti mcp server",
-          "mcp_agent_instructions": "gti mcp server",
+          "mcp_server_description": "Google Threat Intelligence (GTI) MCP server. Exposes tools to query Indicators of Compromise (IOCs), threat analytics, domain and IP address intelligence, and file/artifact reputation or sandbox analysis.",
+          "mcp_agent_instructions": "You are a security analyst assistant. Use this Google Threat Intelligence (GTI) MCP server to analyze security threats, investigate network artifacts (domains, IPs, URLs), and query file reports or execution behaviors. Always validate hash formats (MD5, SHA1, SHA256) and ensure domain inputs are stripped of protocol schemas before querying.",
           "mcp_server_source": "BYO_MCP"
         },
         "createBapConnection": true,
@@ -446,7 +499,7 @@ curl -X POST \
   "https://${LOCATION}-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/${LOCATION}:setUpDataConnector?collectionId=${COLLECTION_ID}"
 ```
 
-### Step 4: Authorize the Gemini Enterprise Service Account (IAM)
+### Step 5: Authorize the Gemini Enterprise Service Account (IAM)
 Because your Cloud Run service is locked down securely (`--no-allow-unauthenticated`), you must explicitly authorize the Gemini Enterprise Discovery Engine system service account to call and invoke your Cloud Run endpoint.
 
 Run these commands to bind the **Cloud Run Invoker** role:
@@ -462,40 +515,30 @@ gcloud run services add-iam-policy-binding gti-mcp-server \
     --project=${PROJECT_ID}
 ```
 
-### Step 5: Fetch and Enable Your Threat Intelligence Actions (via REST API)
-Query your running Cloud Run server dynamically to reload all available tools into the data store, then enable the specific threat intelligence actions:
+### Step 6: Reload and Enable Your Actions (GCP Console UI)
+Because the custom actions discovery and OAuth consent handshake are handled securely by Google Cloud Console's frontend, you must perform a one-time manual reload to authorize and activate your threat intelligence tools:
 
-1. **Reload and sync the MCP server capabilities:**
-   ```bash
-   curl -X POST \
-       -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-       -H "Content-Type: application/json" \
-       "https://discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/${LOCATION}/collections/${COLLECTION_ID}/dataStores/${DATA_STORE_ID}:reloadMcp" \
-       -d '{}'
-   ```
+1. Open the [Google Cloud Agent Builder Data Stores Console](https://console.cloud.google.com/ai/search/datastores).
+2. Select your newly created **Google Threat Intelligence Tools** data store.
+3. Click on the **Actions** tab on the left-hand navigation pane.
+4. If prompted, click **Re-authenticate** to sign in and complete the OAuth connection.
+5. Click the **Reload custom actions** button. This will connect to your Cloud Run service's `/mcp` endpoint and dynamically populate all 45+ GTI tools.
+6. Select the tools you want to enable, and click **Enable actions**.
 
-2. **Enable specific Google Threat Intelligence actions/tools:**
-   ```bash
-   curl -X POST \
-       -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-       -H "Content-Type: application/json" \
-       "https://discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/${LOCATION}/collections/${COLLECTION_ID}/dataStores/${DATA_STORE_ID}/actions:enable" \
-       -d '{
-         "actionIds": ["get_file_report", "search_iocs", "get_domain_report", "get_ip_address_report", "get_url_report"]
-       }'
-   ```
+---
 
-### Step 6: Link the Custom MCP Data Store to your Gemini App (via REST API)
+### Step 7: Link the Custom MCP Data Store to your Gemini App (via REST API)
 Finally, link your newly configured threat intelligence data store to your active Gemini App configuration (e.g., `default-chat`):
 
 ```bash
 curl -X POST \
     -H "Authorization: Bearer $(gcloud auth print-access-token)" \
     -H "Content-Type: application/json" \
-    "https://discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/${LOCATION}/collections/${COLLECTION_ID}/engines/default-chat:addTargetDataStore" \
+    "https://${LOCATION}-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/${LOCATION}/collections/${COLLECTION_ID}/engines/default-chat:addTargetDataStore" \
     -d '{
       "targetDataStoreId": "'"${DATA_STORE_ID}"'"
     }'
 ```
 
 Your Gemini Enterprise conversational app is now fully integrated with real-time Google Threat Intelligence capabilities, securely authorized, and ready to assist your security operations team! 🚀
+

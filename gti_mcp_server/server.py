@@ -62,22 +62,16 @@ from gti_mcp_server.tools import *
 
 # Run the server
 def main():
-  # Detect transport from environment, default to stdio
-  transport_env = os.getenv("TRANSPORT", "").strip().lower()
+  # Detect transport from environment, default to sse
+  transport_env = os.getenv("TRANSPORT", "sse").strip().lower()
+  if transport_env == "http":
+    transport_env = "streamable-http"
   port_env = os.getenv("PORT")
 
-  if transport_env:
-    transport = transport_env
-  elif port_env:
-    # If PORT is specified but TRANSPORT is not, default to sse
-    transport = "sse"
-  else:
-    transport = "stdio"
-
-  if transport in ("sse", "http"):
+  if transport_env in ("sse", "streamable-http"):
     # Set logging level to INFO so we see server start logs
     logging.getLogger().setLevel(logging.INFO)
-    logging.info("Starting FastMCP server with SSE transport")
+    logging.info(f"Starting FastMCP server with {transport_env} transport")
     
     # Map standard PORT and HOST variables to FastMCP's expected config vars
     if port_env:
@@ -93,7 +87,7 @@ def main():
     server.settings.host = os.environ["FASTMCP_HOST"]
     server.settings.port = int(os.environ["FASTMCP_PORT"])
     
-    server.run(transport="sse")
+    server.run(transport=transport_env)
   else:
     logging.info("Starting FastMCP server with stdio transport")
     server.run(transport="stdio")
