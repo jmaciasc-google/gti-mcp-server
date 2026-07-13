@@ -129,14 +129,11 @@ Once inside the directory, choose the section that matches your goal:
 
 Because Model Context Protocol (MCP) uses **Server-Sent Events (SSE)** under the hood, you can verify your local server using standard command-line tools without needing a desktop AI client or agent installed. 
 
-This test requires **three separate terminal windows (or tabs)**:
+This test requires **two additional terminal windows (or tabs)**, leaving your local server running in your current window from the previous step:
 
 #### Step 1: Run the Server (Terminal Window 1)
-Boot your local server in SSE mode so it is ready to receive network connections:
-```bash
-export VT_APIKEY="your_actual_gti_api_key_here"
-TRANSPORT=sse PORT=8000 gti-mcp-server
-```
+This is the server you already started in the previous **Quick Start** step! 
+*(If you stopped it, simply open Terminal Window 1, activate your virtual environment, and run `gti-mcp-server` again).*
 *Leave this server running.*
 
 #### Step 2: Open the Event Stream (Terminal Window 2)
@@ -210,20 +207,21 @@ In your third terminal window, run the following three requests sequentially (su
 
 ---
 
-## Containerization & Docker
+## Containerization & Docker (Alternative)
 
-This server is packaged with a high-performance, secure **multi-stage Docker build**. The builder stage packages the application into a Python wheel, and the runner stage installs it into a slim environment running as a restricted, non-root system user (`mcpuser` with UID 10001).
+This server is pre-configured with a secure, multi-stage **Docker build spec** and a companion **Docker Compose** layout. 
 
-### 1. Build the Docker Image
+Since `docker-compose.yml` is configured to build your container automatically, **you do not need to run a separate build command!** You can compile the image and launch the container on-the-fly with a single command:
+
 ```bash
-docker build -t gti-mcp-server:latest .
-```
+# Make sure your API key is in your active terminal environment
+export VT_APIKEY="your_actual_gti_api_key_here"
 
-### 2. Run with Docker Compose
-Using Docker Compose binds the container to port `8000` and loads configuration from your `.env` file:
-```bash
+# Compile and start the server in the background
 docker compose up -d
 ```
+
+This starts the containerized server in the background, maps port `8000` to port `8000` on your host computer, and passes your terminal's `${VT_APIKEY}` directly into the secure container memory.
 
 ---
 
@@ -389,6 +387,7 @@ In your second terminal window, send a single JSON-RPC POST request to the proxi
 ```bash
 curl -X POST \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -d '{
     "jsonrpc": "2.0",
     "id": 1,
@@ -527,18 +526,16 @@ Because the custom actions discovery and OAuth consent handshake are handled sec
 
 ---
 
-### Step 7: Link the Custom MCP Data Store to your Gemini App (via REST API)
-Finally, link your newly configured threat intelligence data store to your active Gemini App configuration (e.g., `default-chat`):
+### Step 7: Link the Custom MCP Data Store to your Gemini App (GCP Console UI)
+Finally, link your newly configured threat intelligence data store to your active Gemini App configuration (e.g., your chat or search application):
 
-```bash
-curl -X POST \
-    -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-    -H "Content-Type: application/json" \
-    "https://${LOCATION}-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/${LOCATION}/collections/${COLLECTION_ID}/engines/default-chat:addTargetDataStore" \
-    -d '{
-      "targetDataStoreId": "'"${DATA_STORE_ID}"'"
-    }'
-```
+1. Open the [Gemini Enterprise Console](https://console.cloud.google.com/gemini-enterprise/apps).
+2. In the left-hand navigation pane, click on **Apps** 
+3. Click on your Gemini Enterprise application
+4. In the left-hand navigation pane, click on **Connected data stores**.
+5. Click **Add existing data store**
+6. Select your newly created **Google Threat Intelligence Tools** data store from the list.
+7. Click **Connect** (or **Save**) to confirm.
 
 Your Gemini Enterprise conversational app is now fully integrated with real-time Google Threat Intelligence capabilities, securely authorized, and ready to assist your security operations team! 🚀
 
